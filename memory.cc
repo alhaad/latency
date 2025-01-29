@@ -1,38 +1,52 @@
+#include <benchmark/benchmark.h>
+
+#define SIZE 1024 * 1024
+
 // Measure the time for main memory reference.
-// We need to ensure that we are not causing L1, L2, or L3 cache hits
-// by using a linked list that is larger than the cache size.
-
-#include <iostream>
-#include <chrono>
-#include <list>
-
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <number_of_iterations>" << std::endl;
-        return 1;
+// TODO: Figure out why the number changes with SIZE.
+static void BM_MemoryReference(benchmark::State& state) {
+    const size_t size = SIZE;
+    std::vector<size_t> indices(size);
+    
+    // Create random permutation for random memory access
+    for (size_t i = 0; i < size; i++) {
+        indices[i] = i;
+    }
+    std::random_shuffle(indices.begin(), indices.end());
+    
+    // Link each element to point to another random element
+    std::vector<size_t> data(size);
+    for (size_t i = 0; i < size; i++) {
+        data[i] = indices[(i + 1) % size];
     }
 
-    int iterations = std::stoi(argv[1]);
-    std::list<int> lst;
-
-    for (int i = 0; i < iterations; ++i) {
-        // TODO: The problem is that we're allocating consecutive memory
-        // addresses. Which means that we're causing L1, L2, or L3 cache hits.
-        // We need to allocate memory in a way that we're not causing cache
-        // hits. Eg. create a large array and then read from random indexes.
-        lst.push_back(i);
+    size_t index = 0;
+    for (auto _ : state) {
+        index = data[index];
+        benchmark::DoNotOptimize(index);
     }
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    for (int i = 0; i < iterations; ++i) {
-        lst.pop_front();
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-
-    std::cout << elapsed / iterations << "ns." << std::endl;
-
-    return 0;
 }
+BENCHMARK(BM_MemoryReference);
+
+
+
+// Read 1MB of memory sequentially.
+static void BM_MemorySequential(benchmark::State& state) {
+    int8_t arr[SIZE];
+
+    // While we have allocated 1MB on the stack, reading it sequentially as
+    // bytes will be slow. We need to read it as 64-bit integers.
+    int64_t* vec = reinterpret_cast<int64_t*>(arr);
+
+    for (auto _ : state) {
+        for (int i = 0; i < SIZE / 8; ++i) {
+            auto x = vec[i];
+
+            // Prevent the compiler from optimizing out the read.
+            benchmark::DoNotOptimize(x);
+        }
+    }
+}
+BENCHMARK(BM_MemorySequential);
+
+BENCHMARK_MAIN();

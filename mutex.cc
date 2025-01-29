@@ -1,29 +1,21 @@
-// Mesaure the time of mutex lock and unlock.
-
-#include <iostream>
+#include <benchmark/benchmark.h>
 #include <mutex>
-#include <chrono>
 
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <number_of_iterations>" << std::endl;
-        return 1;
-    }
-
-    int iterations = std::stoi(argv[1]);
+static void BM_MutexLockUnlock(benchmark::State& state) {
     std::mutex mtx;
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    for (int i = 0; i < iterations; ++i) {
+    for (auto _ : state) {
         mtx.lock();
         mtx.unlock();
     }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-
-    std::cout << elapsed / iterations << "ns." << std::endl;
-
-    return 0;
 }
+BENCHMARK(BM_MutexLockUnlock);
+
+static void BM_MutexLockGuard(benchmark::State& state) {
+    std::mutex mtx;
+    for (auto _ : state) {
+        std::lock_guard<std::mutex> lock(mtx);
+    }
+}
+BENCHMARK(BM_MutexLockGuard);
+
+BENCHMARK_MAIN();
