@@ -1,4 +1,6 @@
 #include <benchmark/benchmark.h>
+#include <algorithm>
+#include <random>
 
 #define SIZE 1024 * 1024
 
@@ -12,7 +14,10 @@ static void BM_MemoryReference(benchmark::State& state) {
     for (size_t i = 0; i < size; i++) {
         indices[i] = i;
     }
-    std::random_shuffle(indices.begin(), indices.end());
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(indices.begin(), indices.end(), g);
     
     // Link each element to point to another random element
     std::vector<size_t> data(size);
