@@ -20,3 +20,6 @@ target_link_libraries(memory benchmark::benchmark)
 
 add_executable(compress compress.cc)
 target_link_libraries(compress benchmark::benchmark snappy)
+
+add_executable(ssd ssd.cc)
+target_link_libraries(ssd benchmark::benchmark)
